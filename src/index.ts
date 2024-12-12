@@ -1,13 +1,23 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { server } from './calendar-server.js';
+import { server, initialize } from './calendar-server.js';
 
 async function main() {
   try {
-    // Initialize transport
+    // Initialize transport first
     const transport = new StdioServerTransport();
     
     // Connect server to transport
     await server.connect(transport);
+
+    // Initialize server and authentication
+    const initialized = await initialize();
+    if (!initialized) {
+      server.sendLoggingMessage({
+        level: "error",
+        data: "Failed to initialize server - authentication required"
+      });
+      process.exit(1);
+    }
     
     server.sendLoggingMessage({
       level: "info",

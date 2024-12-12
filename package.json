@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "build:watch": "tsc --watch",
     "start": "node build/index.js",
     "auth": "node build/auth-server.js",
     "dev": "ts-node --esm src/index.ts"
