@@ -7,6 +7,14 @@ import * as dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
+process.removeAllListeners('warning');
+process.on('warning', (warning) => {
+  if (warning.name === 'DeprecationWarning' && warning.message.includes('punycode')) {
+    return;
+  }
+  console.warn(warning.name, warning.message);
+});
+
 const app = express();
 const PORT = 3000;
 
@@ -39,15 +47,21 @@ app.get('/oauth2callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     
     if (!tokens.refresh_token) {
+      console.error('No refresh token received');
       res.redirect('/');
       return;
     }
 
-    oauth2Client.setCredentials(tokens);
+    const tokenData = {
+      ...tokens,
+      expiry_date: tokens.expiry_date || Date.now() + 3600 * 1000 // Default 1 hour expiry
+    };
+
+    oauth2Client.setCredentials(tokenData);
 
     // Save tokens to a file
     const tokenPath = path.join(process.cwd(), '.calendar-tokens.json');
-    await fs.writeFile(tokenPath, JSON.stringify(tokens, null, 2));
+    await fs.writeFile(tokenPath, JSON.stringify(tokenData, null, 2));
 
     res.send('Authentication successful! You can close this window.');
   } catch (error) {

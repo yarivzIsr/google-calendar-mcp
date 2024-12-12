@@ -59,27 +59,46 @@ async function loadSavedTokens() {
     const tokenPath = path.join(process.cwd(), '.calendar-tokens.json');
     const tokens = JSON.parse(await fs.readFile(tokenPath, 'utf-8'));
     
-    // Set credentials and handle token refresh
-    oauth2Client.setCredentials(tokens);
-    
+    // Check if tokens are expired or will expire soon (5 minutes buffer)
+    const expiryDate = tokens.expiry_date;
+    const isExpired = expiryDate ? Date.now() >= (expiryDate - 5 * 60 * 1000) : true;
+
+    if (isExpired && tokens.refresh_token) {
+      // Force token refresh
+      oauth2Client.setCredentials(tokens);
+      const response = await oauth2Client.refreshAccessToken();
+      const newTokens = response.credentials;
+      
+      // Save new tokens
+      await fs.writeFile(tokenPath, JSON.stringify(newTokens, null, 2));
+      oauth2Client.setCredentials(newTokens);
+    } else {
+      oauth2Client.setCredentials(tokens);
+    }
+
     // Set up token refresh handler
     oauth2Client.on('tokens', async (newTokens) => {
+      const currentTokens = JSON.parse(await fs.readFile(tokenPath, 'utf-8'));
       const updatedTokens = {
-        ...tokens,
+        ...currentTokens,
         ...newTokens,
+        // Preserve refresh_token if not in newTokens
+        refresh_token: newTokens.refresh_token || currentTokens.refresh_token
       };
-      await fs.writeFile(tokenPath, JSON.stringify(updatedTokens));
+      await fs.writeFile(tokenPath, JSON.stringify(updatedTokens, null, 2));
     });
 
     return true;
   } catch (error) {
-    // Generate authentication URL
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: ['https://www.googleapis.com/auth/calendar'],
     });
 
-    console.error('Authentication required. Please visit:', authUrl);
+    server.sendLoggingMessage({
+      level: "error",
+      data: `Authentication required. Please:\n1. Start the auth server with 'npm run auth'\n2. Visit: ${authUrl}\n3. Complete the Google authentication\n4. Restart this calendar server`
+    });
     return false;
   }
 }
@@ -356,8 +375,44 @@ export async function initialize() {
     }
   });
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-
   return true;
 }
+
+// Main function to start the server
+async function main() {
+  try {
+    // Initialize transport and connect first
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+
+    // Try to initialize up to 3 times with a delay
+    for (let i = 0; i < 3; i++) {
+      const initialized = await initialize();
+      if (initialized) {
+        server.sendLoggingMessage({
+          level: "info",
+          data: "Google Calendar MCP server started successfully"
+        });
+        return;
+      }
+      
+      // Wait 2 seconds before retrying
+      if (i < 2) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    // If we get here, initialization failed
+    server.sendLoggingMessage({
+      level: "error",
+      data: "Failed to initialize after multiple attempts. Please ensure you've authenticated via 'npm run auth' first."
+    });
+    
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+main();
