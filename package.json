@@ -7,7 +7,7 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "start": "node build/index.js",
-    "auth": "ts-node src/auth-server.ts",
+    "auth": "node build/auth-server.js",
     "dev": "ts-node --esm src/index.ts"
   },
   "dependencies": {
