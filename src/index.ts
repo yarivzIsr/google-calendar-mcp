@@ -24,6 +24,8 @@ const CreateEventArgumentsSchema = z.object({
   description: z.string().optional(),
   start: z.string(),
   end: z.string(),
+  attendees: z.array(z.string()).optional(),
+  location: z.string().optional(),
 });
 
 const UpdateEventArgumentsSchema = z.object({
@@ -33,6 +35,8 @@ const UpdateEventArgumentsSchema = z.object({
   description: z.string().optional(),
   start: z.string().optional(),
   end: z.string().optional(),
+  attendees: z.array(z.string()).optional(),
+  location: z.string().optional(),
 });
 
 const DeleteEventArgumentsSchema = z.object({
@@ -64,6 +68,7 @@ async function loadSavedTokens(): Promise<boolean> {
   try {
     const tokenPath = '/Users/nate/Projects/google-calendar-mcp/.calendar-tokens.json';
     const tokens = JSON.parse(await fs.readFile(tokenPath, 'utf-8'));
+    oauth2Client.setCredentials(tokens);
     
     const expiryDate = tokens.expiry_date;
     const isExpired = expiryDate ? Date.now() >= (expiryDate - 5 * 60 * 1000) : true;
@@ -73,8 +78,6 @@ async function loadSavedTokens(): Promise<boolean> {
       const newTokens = response.credentials;
       await fs.writeFile(tokenPath, JSON.stringify(newTokens, null, 2));
       oauth2Client.setCredentials(newTokens);
-    } else {
-      oauth2Client.setCredentials(tokens);
     }
 
     oauth2Client.on('tokens', async (newTokens) => {
@@ -155,8 +158,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "End time in ISO format",
             },
+            location: {
+              type: "string",
+              description: "Location of the event",
+            },
           },
-          required: ["calendarId", "summary", "start", "end"],
+          required: ["calendarId", "summary", "start", "end", "location"],
         },
       },
       {
@@ -188,6 +195,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             end: {
               type: "string",
               description: "New end time in ISO format",
+            },
+            location: {
+              type: "string",
+              description: "New location of the event",
             },
           },
           required: ["calendarId", "eventId"],
@@ -247,9 +258,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return {
           content: [{
             type: "text",
-            text: events.map(event => 
-              `${event.summary} (${event.id})\nStart: ${event.start?.dateTime || event.start?.date}\nEnd: ${event.end?.dateTime || event.end?.date}\n`
-            ).join('\n')
+            text: events.map(event => {
+              const attendeeList = event.attendees 
+                ? `\nAttendees: ${event.attendees.map(a => `${a.email} (${a.responseStatus})`).join(', ')}`
+                : '';
+              const locationInfo = event.location ? `\nLocation: ${event.location}` : '';
+              return `${event.summary} (${event.id})${locationInfo}\nStart: ${event.start?.dateTime || event.start?.date}\nEnd: ${event.end?.dateTime || event.end?.date}${attendeeList}\n`;
+            }).join('\n')
           }]
         };
       }
@@ -263,6 +278,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             description: validArgs.description,
             start: { dateTime: validArgs.start },
             end: { dateTime: validArgs.end },
+            attendees: validArgs.attendees?.map(email => ({ email })),
+            location: validArgs.location,
           },
         });
         
@@ -284,6 +301,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             description: validArgs.description,
             start: validArgs.start ? { dateTime: validArgs.start } : undefined,
             end: validArgs.end ? { dateTime: validArgs.end } : undefined,
+            attendees: validArgs.attendees?.map(email => ({ email })),
+            location: validArgs.location,
           },
         });
         
