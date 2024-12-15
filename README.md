@@ -75,7 +75,7 @@ The server exposes the following tools:
 
 ## Using with Claude Desktop
 
-1. Add this configuration to your Claude Desktop config file:
+1. Add this configuration to your Claude Desktop config file. E.g. `/Users/<user>/Library/Application Support/Claude/claude_desktop_config.json`:
    ```json
    {
      "mcpServers": {
@@ -91,11 +91,23 @@ The server exposes the following tools:
 
 ## Example Usage
 
-Here are some example prompts you can use with Claude:
+Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic things like add events from screenshots and images and much more.
 
 1. Add events from screenshots and images.
    ```
-   Add this event to my calendar based on this screenshot.
+   Add this event to my calendar based on the attached screenshot.
+   ```
+2. Check attendance.
+   ```
+   Which events tomorrow have attendees who have not accepted the invitation?
+   ```
+3. Auto coordinate events.
+   ```
+   Here's some available that was provided to me by someone I am interviewing. Take a look at the available times and create an event for me to interview them that is free on my work calendar.
+   ```
+4. Provide your own availability.
+   ```
+   Please provide availability looking at both my personal and work calendar for this upcoming week. Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
    ```
 
 ## Security Notes
