@@ -19,7 +19,7 @@ This is a Model Context Protocol (MCP) server that provides integration with Goo
 ## Google Cloud Setup
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project or select an existing one
+2. Create a new project or select an existing one.
 3. Enable the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) for your project. Ensure that the right project is selected from the top bar before enabling the API.
 4. Create OAuth 2.0 credentials:
    - Go to Credentials
@@ -27,24 +27,23 @@ This is a Model Context Protocol (MCP) server that provides integration with Goo
    - Choose "User data" for the type of data that the app will be accessing
    - Add your app name and contact information
    - Add the following scopes (optional):
-     - `https://www.googleapis.com/auth/calendar`
      - `https://www.googleapis.com/auth/calendar.events`
    - Select "Desktop app" as the application type
    - Add your email address as a test user under the [OAuth Consent screen](https://console.cloud.google.com/apis/credentials/consent)
+      - Note: it will take a few minutes for the test user to be added. The OAuth consent will not allow you to proceed until the test user has propogated.
 
 ## Installation
 
-1. Install dependencies:
+1. Clone the repository
+2. Install dependencies:
    ```bash
    npm install
    ```
-
-2. Create a `.env` file in the root directory with your Google OAuth credentials. See `.env-example` for an example.
-
 3. Build the TypeScript code:
    ```bash
    npm run build
    ```
+4. Download your Google OAuth credentials from the Google Cloud Console (under "Credentials") and rename the file to `gcp-oauth.keys.json` and place it in the root directory of the project.
 
 ## Authentication
 
@@ -94,29 +93,9 @@ The server exposes the following tools:
 
 Here are some example prompts you can use with Claude:
 
-1. List your calendars:
+1. Add events from screenshots and images.
    ```
-   Can you list my available calendars?
-   ```
-
-2. List events:
-   ```
-   Show me my events for next week in calendar [calendar-id] or [calendar-name]
-   ```
-
-3. Create an event:
-   ```
-   Create an event that will work well for business hours in my local time as well as local time in Sydney. Meeting with [name] on [date].
-   ```
-
-4. Update an event:
-   ```
-   Update the event [event-id] in calendar [calendar-id] to start at 3 PM instead
-   ```
-
-5. Delete an event:
-   ```
-   Delete the event [event-id] from calendar [calendar-id]
+   Add this event to my calendar based on this screenshot.
    ```
 
 ## Security Notes
