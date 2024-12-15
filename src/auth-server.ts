@@ -1,75 +1,74 @@
-import express from 'express';
-import { OAuth2Client } from 'google-auth-library';
+import { authenticate } from '@google-cloud/local-auth';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
 
-// Load environment variables from .env file
-dotenv.config();
+// Helper function to get the keys file path
+function getKeysFilePath(): string {
+  const relativePath = path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    '../gcp-oauth.keys.json'
+  );
+  const absolutePath = path.resolve(relativePath);
+  console.log("Relative path:", relativePath);
+  console.log("Absolute path:", absolutePath);
+  return absolutePath;
+}
 
-process.removeAllListeners('warning');
-process.on('warning', (warning) => {
-  if (warning.name === 'DeprecationWarning' && warning.message.includes('punycode')) {
-    return;
-  }
-  console.warn(warning.name, warning.message);
-});
+// Helper function to get secure token path
+function getSecureTokenPath(): string {
+  return path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    '../.gcp-saved-tokens.json'
+  );
+}
 
-const app = express();
-const PORT = 3000;
-
-// Initialize OAuth client
-const oauth2Client = new OAuth2Client({
-  clientId: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  redirectUri: `http://localhost:${PORT}/oauth2callback`
-});
-
-// Generate auth URL
-const scopes = [
-  'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/calendar.events'
-];
-
-app.get('/', (req, res) => {
-  const authUrl = oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: scopes,
-    prompt: 'consent',
-    include_granted_scopes: true,
-  });
-  res.redirect(authUrl);
-});
-
-app.get('/oauth2callback', async (req, res) => {
-  const code = req.query.code as string;
+async function authenticateAndSaveCredentials(): Promise<void> {
+  console.log("Launching auth flow...");
+  
+  const keyFilePath = getKeysFilePath();
+  console.log("Keys file path:", keyFilePath);
+  
+  // Check if file exists and log its contents
   try {
-    const { tokens } = await oauth2Client.getToken(code);
+    const fileContents = await fs.readFile(keyFilePath, 'utf8');
+    console.log("Keys file exists. Contents:", fileContents);
     
-    if (!tokens.refresh_token) {
-      console.error('No refresh token received');
-      res.redirect('/');
-      return;
+    // Verify the JSON structure
+    const credentials = JSON.parse(fileContents);
+    if (!credentials.installed?.redirect_uris) {
+      console.error("Error: Missing 'installed.redirect_uris' in credentials file");
+      console.log("Credentials structure:", JSON.stringify(credentials, null, 2));
     }
-
-    const tokenData = {
-      ...tokens,
-      expiry_date: tokens.expiry_date || Date.now() + 3600 * 1000 // Default 1 hour expiry
-    };
-
-    oauth2Client.setCredentials(tokenData);
-
-    // Save tokens to a file
-    const tokenPath = path.join(process.cwd(), '.calendar-tokens.json');
-    await fs.writeFile(tokenPath, JSON.stringify(tokenData, null, 2));
-
-    res.send('Authentication successful! You can close this window.');
   } catch (error) {
-    console.error('Error getting tokens:', error);
-    res.status(500).send('Authentication failed!');
+    console.error("Error reading keys file:", error);
   }
-});
+  
+  const auth = await authenticate({
+    keyfilePath: keyFilePath,
+    scopes: ['https://www.googleapis.com/auth/calendar'],
+  });
 
-app.listen(PORT, () => {
-  console.error(`Auth server running at http://localhost:${PORT}`);
-}); 
+  await fs.writeFile(
+    getSecureTokenPath(),
+    JSON.stringify(auth.credentials, null, 2),
+    { mode: 0o600 }
+  );
+    
+  console.log(`Credentials saved to ${getSecureTokenPath()}`);
+  process.exit(0);
+}
+
+// Main function
+async function main() {
+  try {
+    await authenticateAndSaveCredentials();
+  } catch (error) {
+    console.error("Authentication failed:", error);
+    process.exit(1);
+  }
+}
+
+main().catch((error) => {
+  console.error("Fatal error:", error);
+  process.exit(1);
+});
