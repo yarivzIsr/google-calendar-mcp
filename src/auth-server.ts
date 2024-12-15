@@ -31,7 +31,6 @@ async function authenticateAndSaveCredentials(): Promise<void> {
   // Check if file exists and log its contents
   try {
     const fileContents = await fs.readFile(keyFilePath, 'utf8');
-    console.log("Keys file exists. Contents:", fileContents);
     
     // Verify the JSON structure
     const credentials = JSON.parse(fileContents);

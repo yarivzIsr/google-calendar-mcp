@@ -5,11 +5,8 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
 import { z } from "zod";
-
-// Load environment variables
-dotenv.config();
+import { authenticate } from "@google-cloud/local-auth";
 
 // Define Zod schemas for validation
 const ListEventsArgumentsSchema = z.object({
@@ -58,15 +55,39 @@ const server = new Server(
 );
 
 // Initialize OAuth2 client
-const oauth2Client = new OAuth2Client({
-  clientId: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET
-});
+async function initializeOAuth2Client() {
+  try {
+    const keysContent = await fs.readFile(getKeysFilePath(), 'utf-8');
+    const keys = JSON.parse(keysContent);
+    
+    const { client_id, client_secret, redirect_uris } = keys.installed;
+    
+    return new OAuth2Client({
+      clientId: client_id,
+      clientSecret: client_secret,
+      redirectUri: redirect_uris[0]
+    });
+  } catch (error) {
+    console.error("Error loading OAuth keys:", error);
+    throw error;
+  }
+}
+
+let oauth2Client: OAuth2Client;
+
+// Helper function to get secure token path
+function getSecureTokenPath(): string {
+  return path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    '../.gcp-saved-tokens.json'
+  );
+}
 
 // Helper function to load and refresh tokens
 async function loadSavedTokens(): Promise<boolean> {
   try {
-    const tokenPath = '/Users/nate/Projects/google-calendar-mcp/.calendar-tokens.json';
+    const tokenPath = getSecureTokenPath();
+    
     const tokens = JSON.parse(await fs.readFile(tokenPath, 'utf-8'));
     oauth2Client.setCredentials(tokens);
     
@@ -76,7 +97,7 @@ async function loadSavedTokens(): Promise<boolean> {
     if (isExpired && tokens.refresh_token) {
       const response = await oauth2Client.refreshAccessToken();
       const newTokens = response.credentials;
-      await fs.writeFile(tokenPath, JSON.stringify(newTokens, null, 2));
+      await fs.writeFile(tokenPath, JSON.stringify(newTokens, null, 2), { mode: 0o600 });
       oauth2Client.setCredentials(newTokens);
     }
 
@@ -87,7 +108,7 @@ async function loadSavedTokens(): Promise<boolean> {
         ...newTokens,
         refresh_token: newTokens.refresh_token || currentTokens.refresh_token
       };
-      await fs.writeFile(tokenPath, JSON.stringify(updatedTokens, null, 2));
+      await fs.writeFile(tokenPath, JSON.stringify(updatedTokens, null, 2), { mode: 0o600 });
     });
 
     return true;
@@ -342,23 +363,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
+// Add this helper function to get the keys file path
+function getKeysFilePath(): string {
+  const relativePath = path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    '../gcp-oauth.keys.json'
+  );
+  const absolutePath = path.resolve(relativePath);
+  return absolutePath;
+}
+
 // Start the server
 async function main() {
-  // Validate environment variables
-  const required = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
-  const missing = required.filter(key => !process.env[key]);
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-
-  // Load tokens
+  oauth2Client = await initializeOAuth2Client();
+  const credentialsPath = getSecureTokenPath();
+  
+  // Check if we have saved tokens
   const isAuthenticated = await loadSavedTokens();
   if (!isAuthenticated) {
-    const authUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: ['https://www.googleapis.com/auth/calendar'],
-    });
-    console.error(`Authentication required. Please:\n1. Start the auth server with 'npm run auth'\n2. Visit: ${authUrl}\n3. Complete the Google authentication\n4. Restart this calendar server`);
+    console.error("Authentication failed");
     process.exit(1);
   }
 
