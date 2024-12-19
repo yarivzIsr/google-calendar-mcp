@@ -8,6 +8,26 @@ import * as path from 'path';
 import { z } from "zod";
 import { authenticate } from "@google-cloud/local-auth";
 
+// Add these interfaces at the top of the file, after the imports
+interface CalendarListEntry {
+  id?: string | null;
+  summary?: string | null;
+}
+
+interface CalendarEvent {
+  id?: string | null;
+  summary?: string | null;
+  start?: { dateTime?: string | null; date?: string | null; };
+  end?: { dateTime?: string | null; date?: string | null; };
+  location?: string | null;
+  attendees?: CalendarEventAttendee[] | null;
+}
+
+interface CalendarEventAttendee {
+  email?: string | null;
+  responseStatus?: string | null;
+}
+
 // Define Zod schemas for validation
 const ListEventsArgumentsSchema = z.object({
   calendarId: z.string(),
@@ -21,7 +41,9 @@ const CreateEventArgumentsSchema = z.object({
   description: z.string().optional(),
   start: z.string(),
   end: z.string(),
-  attendees: z.array(z.string()).optional(),
+  attendees: z.array(z.object({
+    email: z.string()
+  })).optional(),
   location: z.string().optional(),
 });
 
@@ -32,7 +54,9 @@ const UpdateEventArgumentsSchema = z.object({
   description: z.string().optional(),
   start: z.string().optional(),
   end: z.string().optional(),
-  attendees: z.array(z.string()).optional(),
+  attendees: z.array(z.object({
+    email: z.string()
+  })).optional(),
   location: z.string().optional(),
 });
 
@@ -183,8 +207,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "Location of the event",
             },
+            attendees: {
+              type: "array",
+              description: "List of attendees",
+              items: {
+                type: "object",
+                properties: {
+                  email: {
+                    type: "string",
+                    description: "Email address of the attendee"
+                  }
+                },
+                required: ["email"]
+              }
+            }
           },
-          required: ["calendarId", "summary", "start", "end", "location"],
+          required: ["calendarId", "summary", "start", "end"],
         },
       },
       {
@@ -221,6 +259,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "New location of the event",
             },
+            attendees: {
+              type: "array",
+              description: "List of attendees",
+              items: {
+                type: "object",
+                properties: {
+                  email: {
+                    type: "string",
+                    description: "Email address of the attendee"
+                  }
+                },
+                required: ["email"]
+              }
+            }
           },
           required: ["calendarId", "eventId"],
         },
@@ -260,7 +312,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return {
           content: [{
             type: "text",
-            text: calendars.map(cal => `${cal.summary} (${cal.id})`).join('\n')
+            text: calendars.map((cal: CalendarListEntry) => 
+              `${cal.summary || 'Untitled'} (${cal.id || 'no-id'})`).join('\n')
           }]
         };
       }
@@ -279,12 +332,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return {
           content: [{
             type: "text",
-            text: events.map(event => {
+            text: events.map((event: CalendarEvent) => {
               const attendeeList = event.attendees 
-                ? `\nAttendees: ${event.attendees.map(a => `${a.email} (${a.responseStatus})`).join(', ')}`
+                ? `\nAttendees: ${event.attendees.map((a: CalendarEventAttendee) => 
+                    `${a.email || 'no-email'} (${a.responseStatus || 'unknown'})`).join(', ')}`
                 : '';
               const locationInfo = event.location ? `\nLocation: ${event.location}` : '';
-              return `${event.summary} (${event.id})${locationInfo}\nStart: ${event.start?.dateTime || event.start?.date}\nEnd: ${event.end?.dateTime || event.end?.date}${attendeeList}\n`;
+              return `${event.summary || 'Untitled'} (${event.id || 'no-id'})${locationInfo}\nStart: ${event.start?.dateTime || event.start?.date || 'unspecified'}\nEnd: ${event.end?.dateTime || event.end?.date || 'unspecified'}${attendeeList}\n`;
             }).join('\n')
           }]
         };
@@ -292,29 +346,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "create-event": {
         const validArgs = CreateEventArgumentsSchema.parse(args);
-        const response = await calendar.events.insert({
+        const event = await calendar.events.insert({
           calendarId: validArgs.calendarId,
           requestBody: {
             summary: validArgs.summary,
             description: validArgs.description,
             start: { dateTime: validArgs.start },
             end: { dateTime: validArgs.end },
-            attendees: validArgs.attendees?.map(email => ({ email })),
+            attendees: validArgs.attendees,
             location: validArgs.location,
           },
-        });
+        }).then(response => response.data);
         
         return {
           content: [{
             type: "text",
-            text: `Event created: ${response.data.summary} (${response.data.id})`
+            text: `Event created: ${event.summary} (${event.id})`
           }]
         };
       }
 
       case "update-event": {
         const validArgs = UpdateEventArgumentsSchema.parse(args);
-        const response = await calendar.events.patch({
+        const event = await calendar.events.patch({
           calendarId: validArgs.calendarId,
           eventId: validArgs.eventId,
           requestBody: {
@@ -322,15 +376,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             description: validArgs.description,
             start: validArgs.start ? { dateTime: validArgs.start } : undefined,
             end: validArgs.end ? { dateTime: validArgs.end } : undefined,
-            attendees: validArgs.attendees?.map(email => ({ email })),
+            attendees: validArgs.attendees,
             location: validArgs.location,
           },
-        });
+        }).then(response => response.data);
         
         return {
           content: [{
             type: "text",
-            text: `Event updated: ${response.data.summary} (${response.data.id})`
+            text: `Event updated: ${event.summary} (${event.id})`
           }]
         };
       }

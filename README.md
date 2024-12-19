@@ -9,12 +9,25 @@ This is a Model Context Protocol (MCP) server that provides integration with Goo
 - Create new calendar events
 - Update existing events
 - Delete events
+- Process events from screenshots and images
 
-## Prerequisites
+## Requirements
 
 1. Node.js 16 or higher
-2. A Google Cloud project with the Calendar API enabled
-3. OAuth 2.0 credentials (Client ID and Client Secret)
+2. TypeScript 5.3 or higher
+3. A Google Cloud project with the Calendar API enabled
+4. OAuth 2.0 credentials (Client ID and Client Secret)
+
+## Project Structure
+
+```
+google-calendar-mcp/
+├── src/           # TypeScript source files
+├── build/         # Compiled JavaScript output
+├── llm/           # LLM-specific configurations and prompts
+├── package.json   # Project dependencies and scripts
+└── tsconfig.json  # TypeScript configuration
+```
 
 ## Google Cloud Setup
 
@@ -44,6 +57,13 @@ This is a Model Context Protocol (MCP) server that provides integration with Goo
    npm run build
    ```
 4. Download your Google OAuth credentials from the Google Cloud Console (under "Credentials") and rename the file to `gcp-oauth.keys.json` and place it in the root directory of the project.
+
+## Available Scripts
+
+- `npm run build` - Build the TypeScript code
+- `npm run build:watch` - Build TypeScript in watch mode for development
+- `npm run dev` - Start the server in development mode using ts-node
+- `npm run auth` - Start the authentication server for Google OAuth flow
 
 ## Authentication
 
@@ -81,7 +101,7 @@ The server exposes the following tools:
      "mcpServers": {
        "google-calendar": {
          "command": "node",
-         "args": ["path/to/build/calendar-server.js"]
+         "args": ["path/to/build/index.js"]
        }
      }
    }
@@ -93,22 +113,44 @@ The server exposes the following tools:
 
 Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic things like add events from screenshots and images and much more.
 
-1. Add events from screenshots and images.
+1. Add events from screenshots and images:
    ```
    Add this event to my calendar based on the attached screenshot.
    ```
-2. Check attendance.
+   Supported image formats: PNG, JPEG, GIF
+   Images can contain event details like date, time, location, and description
+   
+2. Check attendance:
    ```
    Which events tomorrow have attendees who have not accepted the invitation?
    ```
-3. Auto coordinate events.
+3. Auto coordinate events:
    ```
    Here's some available that was provided to me by someone I am interviewing. Take a look at the available times and create an event for me to interview them that is free on my work calendar.
    ```
-4. Provide your own availability.
+4. Provide your own availability:
    ```
    Please provide availability looking at both my personal and work calendar for this upcoming week. Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
    ```
+
+## Development
+
+### Troubleshooting
+
+Common issues and solutions:
+
+1. OAuth Token Errors
+   - Ensure your `gcp-oauth.keys.json` is correctly formatted
+   - Try deleting `.gcp-saved-tokens.json` and re-authenticating
+   
+2. TypeScript Build Errors
+   - Make sure all dependencies are installed: `npm install`
+   - Check your Node.js version matches prerequisites
+   - Clear the build directory: `rm -rf build/`
+
+3. Image Processing Issues
+   - Verify the image format is supported
+   - Ensure the image contains clear, readable text
 
 ## Security Notes
 
