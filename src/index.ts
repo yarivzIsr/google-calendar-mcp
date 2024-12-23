@@ -6,9 +6,7 @@ import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { z } from "zod";
-import { authenticate } from "@google-cloud/local-auth";
 
-// Add these interfaces at the top of the file, after the imports
 interface CalendarListEntry {
   id?: string | null;
   summary?: string | null;
@@ -112,27 +110,52 @@ async function loadSavedTokens(): Promise<boolean> {
   try {
     const tokenPath = getSecureTokenPath();
     
+    if (!await fs.access(tokenPath).then(() => true).catch(() => false)) {
+      console.error('No token file found');
+      return false;
+    }
+
     const tokens = JSON.parse(await fs.readFile(tokenPath, 'utf-8'));
+    
+    if (!tokens || typeof tokens !== 'object') {
+      console.error('Invalid token format');
+      return false;
+    }
+
     oauth2Client.setCredentials(tokens);
     
     const expiryDate = tokens.expiry_date;
     const isExpired = expiryDate ? Date.now() >= (expiryDate - 5 * 60 * 1000) : true;
 
     if (isExpired && tokens.refresh_token) {
-      const response = await oauth2Client.refreshAccessToken();
-      const newTokens = response.credentials;
-      await fs.writeFile(tokenPath, JSON.stringify(newTokens, null, 2), { mode: 0o600 });
-      oauth2Client.setCredentials(newTokens);
+      try {
+        const response = await oauth2Client.refreshAccessToken();
+        const newTokens = response.credentials;
+        
+        if (!newTokens.access_token) {
+          throw new Error('Received invalid tokens during refresh');
+        }
+
+        await fs.writeFile(tokenPath, JSON.stringify(newTokens, null, 2), { mode: 0o600 });
+        oauth2Client.setCredentials(newTokens);
+      } catch (refreshError) {
+        console.error('Error refreshing auth token:', refreshError);
+        return false;
+      }
     }
 
     oauth2Client.on('tokens', async (newTokens) => {
-      const currentTokens = JSON.parse(await fs.readFile(tokenPath, 'utf-8'));
-      const updatedTokens = {
-        ...currentTokens,
-        ...newTokens,
-        refresh_token: newTokens.refresh_token || currentTokens.refresh_token
-      };
-      await fs.writeFile(tokenPath, JSON.stringify(updatedTokens, null, 2), { mode: 0o600 });
+      try {
+        const currentTokens = JSON.parse(await fs.readFile(tokenPath, 'utf-8'));
+        const updatedTokens = {
+          ...currentTokens,
+          ...newTokens,
+          refresh_token: newTokens.refresh_token || currentTokens.refresh_token
+        };
+        await fs.writeFile(tokenPath, JSON.stringify(updatedTokens, null, 2), { mode: 0o600 });
+      } catch (error) {
+        console.error('Error saving updated tokens:', error);
+      }
     });
 
     return true;
@@ -299,7 +322,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
-// Handle tool execution
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -417,7 +439,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// Add this helper function to get the keys file path
 function getKeysFilePath(): string {
   const relativePath = path.join(
     path.dirname(new URL(import.meta.url).pathname),
@@ -430,13 +451,25 @@ function getKeysFilePath(): string {
 // Start the server
 async function main() {
   oauth2Client = await initializeOAuth2Client();
-  const credentialsPath = getSecureTokenPath();
+  const maxRetries = 3;
+  let retryCount = 0;
   
-  // Check if we have saved tokens
-  const isAuthenticated = await loadSavedTokens();
-  if (!isAuthenticated) {
-    console.error("Authentication failed");
-    process.exit(1);
+  while (retryCount < maxRetries) {
+    const isAuthenticated = await loadSavedTokens();
+    if (isAuthenticated) {
+      break;
+    }
+    
+    console.error(`Authentication attempt ${retryCount + 1} failed, ${maxRetries - retryCount - 1} retries remaining`);
+    retryCount++;
+    
+    if (retryCount === maxRetries) {
+      console.error("All three authentication attempts failed");
+      process.exit(1);
+    }
+    
+    // Wait before retrying
+    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
   }
 
   const transport = new StdioServerTransport();
