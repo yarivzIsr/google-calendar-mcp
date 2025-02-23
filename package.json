@@ -8,12 +8,11 @@
   },
   "scripts": {
     "build": "tsc",
-    "postbuild": "echo '#!/usr/bin/env node' | cat - build/index.js > temp && mv temp build/index.js && chmod +x build/index.js",
     "build:watch": "tsc --watch",
     "start": "node build/index.js",
     "auth": "node build/auth-server.js",
     "dev": "ts-node --esm src/index.ts",
-    "postinstall": "npm run build"
+    "postinstall": "npm run build && echo '#!/usr/bin/env node\n' | cat - build/index.js > temp && mv temp build/index.js && chmod +x build/index.js"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
