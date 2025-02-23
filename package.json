@@ -7,8 +7,10 @@
     "google-calendar-mcp": "./build/index.js"
   },
   "scripts": {
-    "build": "node scripts/build.js",
-    "build:watch": "node scripts/build.js --watch",
+    "typecheck": "tsc --noEmit",
+    "typecheck:watch": "tsc --noEmit --watch",
+    "build": "npm run typecheck && node scripts/build.js",
+    "build:watch": "concurrently \"npm run typecheck:watch\" \"node scripts/build.js --watch\"",
     "start": "node build/index.js",
     "auth": "node build/auth-server.js",
     "dev": "ts-node --esm src/index.ts",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.4",
+    "concurrently": "^8.2.2",
     "typescript": "^5.3.3"
   }
 }
