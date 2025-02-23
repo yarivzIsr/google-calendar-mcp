@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "description": "Google Calendar MCP Server",
   "type": "module",
+  "bin": {
+    "google-calendar-mcp": "./build/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
     "start": "node build/index.js",
     "auth": "node build/auth-server.js",
-    "dev": "ts-node --esm src/index.ts"
+    "dev": "ts-node --esm src/index.ts",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
