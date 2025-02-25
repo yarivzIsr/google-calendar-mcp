@@ -139,16 +139,19 @@ Along with the normal capabilities you would expect for a calendar integration y
 
 Common issues and solutions:
 
-1. OAuth Token Errors
+1. OAuth Token expires after one week (7 days)
+   - Apps that are in testing mode, rather than production, will need to go through the OAuth flow again after a week.
+
+3. OAuth Token Errors
    - Ensure your `gcp-oauth.keys.json` is correctly formatted
    - Try deleting `.gcp-saved-tokens.json` and re-authenticating
    
-2. TypeScript Build Errors
+4. TypeScript Build Errors
    - Make sure all dependencies are installed: `npm install`
    - Check your Node.js version matches prerequisites
    - Clear the build directory: `rm -rf build/`
 
-3. Image Processing Issues
+5. Image Processing Issues
    - Verify the image format is supported
    - Ensure the image contains clear, readable text
 
