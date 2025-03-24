@@ -17,6 +17,34 @@ This is a Model Context Protocol (MCP) server that provides integration with Goo
   - Secure OAuth 2.0 authentication flow
   - Automatic token refresh handling
   - Secure storage of credentials and tokens
+ 
+## Example Usage
+
+Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic things like add events from screenshots and images and much more.
+
+1. Add events from screenshots and images:
+   ```
+   Add this event to my calendar based on the attached screenshot.
+   ```
+   Supported image formats: PNG, JPEG, GIF
+   Images can contain event details like date, time, location, and description
+   
+2. Calendar analysis:
+   ```
+   What events do I have coming up this week that aren't part of my usual routine?
+   ```
+3. Check attendance:
+   ```
+   Which events tomorrow have attendees who have not accepted the invitation?
+   ```
+4. Auto coordinate events:
+   ```
+   Here's some available that was provided to me by someone. Take a look at the available times and create an event that is free on my work calendar.
+   ```
+5. Provide your own availability:
+   ```
+   Please provide availability looking at both my personal and work calendar for this upcoming week. Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
+   ```
 
 ## Requirements
 
@@ -131,32 +159,6 @@ The server exposes the following MCP tools:
   - `delete-event`: Delete a calendar event
   - `list-colors`: List available colors for events and calendars
 
-## Example Usage
-Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic things like add events from screenshots and images and much more.
-
-1. Add events from screenshots and images:
-   ```
-   Add this event to my calendar based on the attached screenshot.
-   ```
-   Supported image formats: PNG, JPEG, GIF
-   Images can contain event details like date, time, location, and description
-   
-2. Calendar analysis:
-   ```
-   What events do I have coming up this week that aren't part of my usual routine?
-   ```
-3. Check attendance:
-   ```
-   Which events tomorrow have attendees who have not accepted the invitation?
-   ```
-4. Auto coordinate events:
-   ```
-   Here's some available that was provided to me by someone I am interviewing. Take a look at the available times and create an event that is free on my work calendar.
-   ```
-4. Provide your own availability:
-   ```
-   Please provide availability looking at both my personal and work calendar for this upcoming week. Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
-   ```
 
 ## Using with Claude Desktop
 
