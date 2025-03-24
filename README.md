@@ -39,13 +39,13 @@ Along with the normal capabilities you would expect for a calendar integration y
    ```
 4. Auto coordinate events:
    ```
-   Here's some available that was provided to me by someone. 
-Take a look at the available times and create an event that is free on my work calendar.
+   Here's some available that was provided to me by someone.
+   Take a look at the available times and create an event that is free on my work calendar.
    ```
 5. Provide your own availability:
    ```
-   Please provide availability looking at both my personal and work calendar for this upcoming week. 
-Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
+   Please provide availability looking at both my personal and work calendar for this upcoming week.
+   Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
    ```
 
 ## Requirements
