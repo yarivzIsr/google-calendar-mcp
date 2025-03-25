@@ -269,34 +269,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             start: {
               type: "string",
               description: "Start time in ISO format",
-              items: {
-                type: "object",
-                properties: {
-                  timeZone: {
-                    type: "string",
-                    description:
-                      "timeZone of the events formatted as an IANA Time Zone Database name (default as user's timeZone and needed for recurring events)",
-                  },
-                },
-              },
             },
             end: {
               type: "string",
               description: "End time in ISO format",
-              items: {
-                type: "object",
-                properties: {
-                  timeZone: {
-                    type: "string",
-                    description:
-                      "timeZone of the events formatted as an IANA Time Zone Database name (default as user's timeZone and needed for recurring events)", //needed for recurring events
-                  },
-                },
-              },
             },
             timeZone: {
               type: "string",
-              description: "timezone of user formatted as an IANA Time Zone Database name",
+              description: "timezone of user formatted as an IANA Time Zone Database name (Needed for recurring events)",
             },
             location: {
               type: "string",
