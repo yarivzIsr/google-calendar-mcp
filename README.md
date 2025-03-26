@@ -11,6 +11,7 @@ This is a Model Context Protocol (MCP) server that provides integration with Goo
   - Update existing events
   - Delete events
   - Manage event attendees and responses
+  - Set and manage event reminders (email and popup notifications)
   - Support for multiple calendars (both primary and secondary)
 
 - Security & Authentication:

@@ -15,6 +15,11 @@ interface CalendarListEntry {
   summary?: string | null;
 }
 
+interface CalendarEventReminder {
+  method: 'email' | 'popup';
+  minutes: number;
+}
+
 interface CalendarEvent {
   id?: string | null;
   summary?: string | null;
@@ -23,6 +28,10 @@ interface CalendarEvent {
   location?: string | null;
   attendees?: CalendarEventAttendee[] | null;
   colorId?: string | null;
+  reminders?: {
+    useDefault: boolean;
+    overrides?: CalendarEventReminder[];
+  };
 }
 
 interface CalendarEventAttendee {
@@ -31,6 +40,16 @@ interface CalendarEventAttendee {
 }
 
 // Define Zod schemas for validation
+const ReminderSchema = z.object({
+  method: z.enum(['email', 'popup']).default('popup'),
+  minutes: z.number(),
+});
+
+const RemindersSchema = z.object({
+  useDefault: z.boolean(),
+  overrides: z.array(ReminderSchema).optional(),
+});
+
 const ListEventsArgumentsSchema = z.object({
   calendarId: z.string(),
   timeMin: z.string().optional(),
@@ -48,6 +67,7 @@ const CreateEventArgumentsSchema = z.object({
   })).optional(),
   location: z.string().optional(),
   colorId: z.string().optional(),
+  reminders: RemindersSchema.optional(),
 });
 
 const UpdateEventArgumentsSchema = z.object({
@@ -62,6 +82,7 @@ const UpdateEventArgumentsSchema = z.object({
   })).optional(),
   location: z.string().optional(),
   colorId: z.string().optional(),
+  reminders: RemindersSchema.optional(),
 });
 
 const DeleteEventArgumentsSchema = z.object({
@@ -263,6 +284,37 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "Color ID for the event",
             },
+            reminders: {
+              type: "object",
+              description: "Reminder settings for the event",
+              properties: {
+                useDefault: {
+                  type: "boolean",
+                  description: "Whether to use the default reminders",
+                },
+                overrides: {
+                  type: "array",
+                  description: "Custom reminders (uses popup notifications by default unless email is specified)",
+                  items: {
+                    type: "object",
+                    properties: {
+                      method: {
+                        type: "string",
+                        enum: ["email", "popup"],
+                        description: "Reminder method (defaults to popup unless email is specified)",
+                        default: "popup"
+                      },
+                      minutes: {
+                        type: "number",
+                        description: "Minutes before the event to trigger the reminder",
+                      }
+                    },
+                    required: ["minutes"]
+                  }
+                }
+              },
+              required: ["useDefault"]
+            }
           },
           required: ["calendarId", "summary", "start", "end"],
         },
@@ -318,6 +370,37 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 },
                 required: ["email"]
               }
+            },
+            reminders: {
+              type: "object",
+              description: "New reminder settings for the event",
+              properties: {
+                useDefault: {
+                  type: "boolean",
+                  description: "Whether to use the default reminders",
+                },
+                overrides: {
+                  type: "array",
+                  description: "Custom reminders (uses popup notifications by default unless email is specified)",
+                  items: {
+                    type: "object",
+                    properties: {
+                      method: {
+                        type: "string",
+                        enum: ["email", "popup"],
+                        description: "Reminder method (defaults to popup unless email is specified)",
+                        default: "popup"
+                      },
+                      minutes: {
+                        type: "number",
+                        description: "Minutes before the event to trigger the reminder",
+                      }
+                    },
+                    required: ["minutes"]
+                  }
+                }
+              },
+              required: ["useDefault"]
             }
           },
           required: ["calendarId", "eventId"],
@@ -387,14 +470,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return {
           content: [{
             type: "text",
-            text: events.map((event: CalendarEvent) => {
+            text: events.map((event) => {
               const attendeeList = event.attendees 
-                ? `\nAttendees: ${event.attendees.map((a: CalendarEventAttendee) => 
+                ? `\nAttendees: ${event.attendees.map((a) => 
                     `${a.email || 'no-email'} (${a.responseStatus || 'unknown'})`).join(', ')}`
                 : '';
               const locationInfo = event.location ? `\nLocation: ${event.location}` : '';
               const colorInfo = event.colorId ? `\nColor ID: ${event.colorId}` : '';
-              return `${event.summary || 'Untitled'} (${event.id || 'no-id'})${locationInfo}\nStart: ${event.start?.dateTime || event.start?.date || 'unspecified'}\nEnd: ${event.end?.dateTime || event.end?.date || 'unspecified'}${attendeeList}${colorInfo}\n`;
+              const reminderInfo = event.reminders ? 
+                `\nReminders: ${event.reminders.useDefault ? 'Using default' : 
+                  (event.reminders.overrides || []).map(r => 
+                    `${r.method} ${r.minutes} minutes before`).join(', ') || 'None'}` : '';
+              return `${event.summary || 'Untitled'} (${event.id || 'no-id'})${locationInfo}\nStart: ${event.start?.dateTime || event.start?.date || 'unspecified'}\nEnd: ${event.end?.dateTime || event.end?.date || 'unspecified'}${attendeeList}${colorInfo}${reminderInfo}\n`;
             }).join('\n')
           }]
         };
@@ -429,6 +516,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             attendees: validArgs.attendees,
             location: validArgs.location,
             colorId: validArgs.colorId,
+            reminders: validArgs.reminders,
           },
         }).then(response => response.data);
         
@@ -453,6 +541,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             attendees: validArgs.attendees,
             location: validArgs.location,
             colorId: validArgs.colorId,
+            reminders: validArgs.reminders,
           },
         }).then(response => response.data);
         
