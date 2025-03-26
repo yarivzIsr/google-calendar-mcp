@@ -192,6 +192,39 @@ async function loadSavedTokens(): Promise<boolean> {
   }
 }
 
+
+const reminders_input_property = {
+    type: "object",
+    description: "Reminder settings for the event",
+    properties: {
+      useDefault: {
+        type: "boolean",
+        description: "Whether to use the default reminders",
+      },
+      overrides: {
+        type: "array",
+        description: "Custom reminders (uses popup notifications by default unless email is specified)",
+        items: {
+          type: "object",
+          properties: {
+            method: {
+              type: "string",
+              enum: ["email", "popup"],
+              description: "Reminder method (defaults to popup unless email is specified)",
+              default: "popup"
+            },
+            minutes: {
+              type: "number",
+              description: "Minutes before the event to trigger the reminder",
+            }
+          },
+          required: ["minutes"]
+        }
+      }
+    },
+    required: ["useDefault"]
+}
+
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -284,37 +317,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "Color ID for the event",
             },
-            reminders: {
-              type: "object",
-              description: "Reminder settings for the event",
-              properties: {
-                useDefault: {
-                  type: "boolean",
-                  description: "Whether to use the default reminders",
-                },
-                overrides: {
-                  type: "array",
-                  description: "Custom reminders (uses popup notifications by default unless email is specified)",
-                  items: {
-                    type: "object",
-                    properties: {
-                      method: {
-                        type: "string",
-                        enum: ["email", "popup"],
-                        description: "Reminder method (defaults to popup unless email is specified)",
-                        default: "popup"
-                      },
-                      minutes: {
-                        type: "number",
-                        description: "Minutes before the event to trigger the reminder",
-                      }
-                    },
-                    required: ["minutes"]
-                  }
-                }
-              },
-              required: ["useDefault"]
-            }
+            reminders: reminders_input_property
           },
           required: ["calendarId", "summary", "start", "end"],
         },
@@ -372,35 +375,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               }
             },
             reminders: {
-              type: "object",
+              ...reminders_input_property,
               description: "New reminder settings for the event",
-              properties: {
-                useDefault: {
-                  type: "boolean",
-                  description: "Whether to use the default reminders",
-                },
-                overrides: {
-                  type: "array",
-                  description: "Custom reminders (uses popup notifications by default unless email is specified)",
-                  items: {
-                    type: "object",
-                    properties: {
-                      method: {
-                        type: "string",
-                        enum: ["email", "popup"],
-                        description: "Reminder method (defaults to popup unless email is specified)",
-                        default: "popup"
-                      },
-                      minutes: {
-                        type: "number",
-                        description: "Minutes before the event to trigger the reminder",
-                      }
-                    },
-                    required: ["minutes"]
-                  }
-                }
-              },
-              required: ["useDefault"]
             }
           },
           required: ["calendarId", "eventId"],
