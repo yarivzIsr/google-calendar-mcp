@@ -158,6 +158,11 @@ Along with the normal capabilities you would expect for a calendar integration y
    Please provide availability looking at both my personal and work calendar for this upcoming week. Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
    ```
 
+5. Creating a recurring event:
+   ```
+   Can you create a study events for every Tue and Thurs 9am - 10am until 4/30
+   ```
+
 ## Using with Claude Desktop
 
 1. Add this configuration to your Claude Desktop config file. E.g. `/Users/<user>/Library/Application Support/Claude/claude_desktop_config.json`:
