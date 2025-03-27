@@ -75,6 +75,7 @@ const UpdateEventArgumentsSchema = z.object({
   description: z.string().optional(),
   start: z.string().optional(),
   end: z.string().optional(),
+  timeZone: z.string(),
   attendees: z
     .array(
       z.object({
@@ -84,6 +85,7 @@ const UpdateEventArgumentsSchema = z.object({
     .optional(),
   location: z.string().optional(),
   colorId: z.string().optional(),
+  recurrence: z.array(z.string()).optional(),
 });
 
 const DeleteEventArgumentsSchema = z.object({
@@ -276,7 +278,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             timeZone: {
               type: "string",
-              description: "timezone of user formatted as an IANA Time Zone Database name (Needed for recurring events)",
+              description:
+                "timezone of user formatted as an IANA Time Zone Database name (Needed for recurring events)",
             },
             location: {
               type: "string",
@@ -306,7 +309,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 "array of recurrence rules (like RRULE, EXRULE, RDATE and EXDATE) for the event in RFC5545 format (DTSTART and DTEND lines are not allowed in this field)",
             },
           },
-          required: ["calendarId", "summary", "start", "end"],
+          required: ["calendarId", "summary", "start", "end", "timeZone"],
         },
       },
       {
@@ -339,6 +342,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "New end time in ISO format",
             },
+            timeZone: {
+              type: "string",
+              description:
+                "timezone of user formatted as an IANA Time Zone Database name (Needed for recurring events)",
+            },
             location: {
               type: "string",
               description: "New location of the event",
@@ -361,8 +369,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 required: ["email"],
               },
             },
+            recurrence: {
+              type: "array",
+              description:
+                "array of recurrence rules (like RRULE, EXRULE, RDATE and EXDATE) for the event in RFC5545 format (DTSTART and DTEND lines are not allowed in this field)",
+            },
           },
-          required: ["calendarId", "eventId"],
+          required: ["calendarId", "eventId", "timeZone"],
         },
       },
       {
@@ -497,12 +510,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             requestBody: {
               summary: validArgs.summary,
               description: validArgs.description,
-              start: { dateTime: validArgs.start, timeZone: validArgs.timeZone },
+              start: {
+                dateTime: validArgs.start,
+                timeZone: validArgs.timeZone,
+              },
               end: { dateTime: validArgs.end, timeZone: validArgs.timeZone },
               attendees: validArgs.attendees,
               location: validArgs.location,
               colorId: validArgs.colorId,
-              recurrence: validArgs.recurrence
+              recurrence: validArgs.recurrence,
             },
           })
           .then((response) => response.data);
@@ -527,12 +543,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               summary: validArgs.summary,
               description: validArgs.description,
               start: validArgs.start
-                ? { dateTime: validArgs.start }
-                : undefined,
-              end: validArgs.end ? { dateTime: validArgs.end } : undefined,
+                ? { dateTime: validArgs.start, timeZone: validArgs.timeZone }
+                : { timeZone: validArgs.timeZone },
+              end: validArgs.end
+                ? { dateTime: validArgs.end, timeZone: validArgs.timeZone }
+                : { timeZone: validArgs.timeZone },
               attendees: validArgs.attendees,
               location: validArgs.location,
               colorId: validArgs.colorId,
+              recurrence: validArgs.recurrence,
             },
           })
           .then((response) => response.data);
