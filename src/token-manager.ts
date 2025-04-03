@@ -1,7 +1,6 @@
 import { OAuth2Client, Credentials } from 'google-auth-library';
 import * as fs from 'fs/promises';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import { getSecureTokenPath } from './utils.js';
 
 export class TokenManager {
   private oauth2Client: OAuth2Client;
@@ -12,14 +11,10 @@ export class TokenManager {
 
   constructor(oauth2Client: OAuth2Client) {
     this.oauth2Client = oauth2Client;
-    this.tokenPath = this.getSecureTokenPath();
+    this.tokenPath = getSecureTokenPath();
     this.setupTokenRefresh();
   }
 
-  private getSecureTokenPath(): string {
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    return path.join(__dirname, '../.gcp-saved-tokens.json');
-  }
 
   private calculateJitter(retryCount: number): number {
     const baseDelay = 1000; // 1 second
@@ -73,7 +68,7 @@ export class TokenManager {
   public async loadSavedTokens(): Promise<boolean> {
     try {
       const tokens = JSON.parse(await fs.readFile(this.tokenPath, 'utf-8'));
-      
+
       if (!tokens || typeof tokens !== 'object') {
         console.error('Invalid token format');
         return false;
@@ -130,4 +125,4 @@ export class TokenManager {
       this.refreshTimer = null;
     }
   }
-} 
+}

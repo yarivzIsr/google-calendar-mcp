@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { z } from "zod";
 import { AuthServer } from './auth-server.js';
 import { TokenManager } from './token-manager.js';
+import { getSecureTokenPath } from './utils.js';
 
 interface CalendarListEntry {
   id?: string | null;
@@ -108,9 +109,9 @@ async function initializeOAuth2Client() {
   try {
     const keysContent = await fs.readFile(getKeysFilePath(), 'utf-8');
     const keys = JSON.parse(keysContent);
-    
+
     const { client_id, client_secret, redirect_uris } = keys.installed;
-    
+
     return new OAuth2Client({
       clientId: client_id,
       clientSecret: client_secret,
@@ -126,31 +127,25 @@ let oauth2Client: OAuth2Client;
 let tokenManager: TokenManager;
 let authServer: AuthServer;
 
-// Helper function to get secure token path
-function getSecureTokenPath(): string {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  return path.join(__dirname, '../.gcp-saved-tokens.json');
-}
-
 // Helper function to load and refresh tokens
 async function loadSavedTokens(): Promise<boolean> {
   try {
     const tokenPath = getSecureTokenPath();
-    
+
     if (!await fs.access(tokenPath).then(() => true).catch(() => false)) {
       console.error('No token file found');
       return false;
     }
 
     const tokens = JSON.parse(await fs.readFile(tokenPath, 'utf-8'));
-    
+
     if (!tokens || typeof tokens !== 'object') {
       console.error('Invalid token format');
       return false;
     }
 
     oauth2Client.setCredentials(tokens);
-    
+
     const expiryDate = tokens.expiry_date;
     const isExpired = expiryDate ? Date.now() >= (expiryDate - 5 * 60 * 1000) : true;
 
@@ -158,7 +153,7 @@ async function loadSavedTokens(): Promise<boolean> {
       try {
         const response = await oauth2Client.refreshAccessToken();
         const newTokens = response.credentials;
-        
+
         if (!newTokens.access_token) {
           throw new Error('Received invalid tokens during refresh');
         }
@@ -406,11 +401,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  
+
   // Check authentication before processing any request
   if (!await tokenManager.validateTokens()) {
     const port = authServer ? 3000 : null;
-    const authMessage = port 
+    const authMessage = port
       ? `Authentication required. Please visit http://localhost:${port} to authenticate with Google Calendar. If this port is unavailable, the server will try ports 3001-3004.`
       : 'Authentication required. Please run "npm run auth" to authenticate with Google Calendar.';
     throw new Error(authMessage);
@@ -426,7 +421,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return {
           content: [{
             type: "text",
-            text: calendars.map((cal: CalendarListEntry) => 
+            text: calendars.map((cal: CalendarListEntry) =>
               `${cal.summary || 'Untitled'} (${cal.id || 'no-id'})`).join('\n')
           }]
         };
@@ -441,21 +436,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           singleEvents: true,
           orderBy: 'startTime',
         });
-        
+
         const events = response.data.items || [];
         return {
           content: [{
             type: "text",
             text: events.map((event) => {
-              const attendeeList = event.attendees 
-                ? `\nAttendees: ${event.attendees.map((a) => 
+              const attendeeList = event.attendees
+                ? `\nAttendees: ${event.attendees.map((a) =>
                     `${a.email || 'no-email'} (${a.responseStatus || 'unknown'})`).join(', ')}`
                 : '';
               const locationInfo = event.location ? `\nLocation: ${event.location}` : '';
               const colorInfo = event.colorId ? `\nColor ID: ${event.colorId}` : '';
-              const reminderInfo = event.reminders ? 
-                `\nReminders: ${event.reminders.useDefault ? 'Using default' : 
-                  (event.reminders.overrides || []).map(r => 
+              const reminderInfo = event.reminders ?
+                `\nReminders: ${event.reminders.useDefault ? 'Using default' :
+                  (event.reminders.overrides || []).map(r =>
                     `${r.method} ${r.minutes} minutes before`).join(', ') || 'None'}` : '';
               return `${event.summary || 'Untitled'} (${event.id || 'no-id'})${locationInfo}\nStart: ${event.start?.dateTime || event.start?.date || 'unspecified'}\nEnd: ${event.end?.dateTime || event.end?.date || 'unspecified'}${attendeeList}${colorInfo}${reminderInfo}\n`;
             }).join('\n')
@@ -466,12 +461,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "list-colors": {
         const response = await calendar.colors.get();
         const colors = response.data.event || {};
-        
+
         const colorList = Object.entries(colors)
-          .map(([id, colorInfo]: [string, any]) => 
+          .map(([id, colorInfo]: [string, any]) =>
             `Color ID: ${id} - ${colorInfo.background} (background) / ${colorInfo.foreground} (foreground)`
           ).join('\n');
-          
+
         return {
           content: [{
             type: "text",
@@ -495,7 +490,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             reminders: validArgs.reminders,
           },
         }).then(response => response.data);
-        
+
         return {
           content: [{
             type: "text",
@@ -520,7 +515,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             reminders: validArgs.reminders,
           },
         }).then(response => response.data);
-        
+
         return {
           content: [{
             type: "text",
@@ -535,7 +530,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           calendarId: validArgs.calendarId,
           eventId: validArgs.eventId,
         });
-        
+
         return {
           content: [{
             type: "text",
