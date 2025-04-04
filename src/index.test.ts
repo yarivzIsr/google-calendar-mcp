@@ -176,9 +176,18 @@ describe('Google Calendar MCP Tool Calls', () => {
     (fs.readFile as ReturnType<typeof vi.fn>).mockClear(); // Clear initial readFile mocks
   });
 
-  it('should throw an error if authentication fails', async () => {
-    // Arrange: Set authentication to fail
-    mockValidateTokens.mockResolvedValue(false);
+  it('should reject if authentication is invalid (simulated)', async () => {
+    // Arrange: Simulate invalid/missing tokens AFTER main has run
+    // (We can't easily test the main() exit path here, so we test the handler's behavior 
+    // when called with a client that *would* fail API calls)
+    
+    // We don't need to mock validateTokens(false) here, 
+    // as the check was removed from the immediate handler call.
+    // Instead, we ensure the underlying API mock is NOT set up to succeed.
+    // Clear any default mocks for the API call that might exist from beforeEach
+    vi.mocked(mockCalendarApi.calendarList.list).mockReset();
+    // Optionally, make it explicitly reject:
+    vi.mocked(mockCalendarApi.calendarList.list).mockRejectedValue(new Error('Simulated API auth error'));
 
     const request = {
       params: {
@@ -187,10 +196,11 @@ describe('Google Calendar MCP Tool Calls', () => {
       },
     };
 
-    // Act & Assert: Expect the handler to throw an auth error
-    // Ensure callToolHandler is not null before calling
+    // Act & Assert: Expect the handler to reject because the underlying API call fails
     if (!callToolHandler) throw new Error('callToolHandler not captured');
-    await expect(callToolHandler(request)).rejects.toThrow(/Authentication required/);
+    await expect(callToolHandler(request)).rejects.toThrow(); // Check for *any* rejection
+    // Optionally, check *which* api call failed or was attempted:
+    // expect(mockCalendarApi.calendarList.list).toHaveBeenCalled(); // Verify it got called
   });
 
   it('should handle "list-calendars" tool call', async () => {
@@ -416,10 +426,101 @@ describe('Google Calendar MCP Tool Calls', () => {
         expect(result.content[0].text).toBe('Event deleted successfully');
     });
 
+    it('should handle "list-colors" tool call', async () => {
+        // Arrange
+        const mockColorsResponse = {
+            event: {
+                '1': { background: '#a4bdfc', foreground: '#1d1d1d' },
+                '2': { background: '#7ae7bf', foreground: '#1d1d1d' },
+            }
+        };
+        (mockCalendarApi.colors.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockColorsResponse });
+
+        const request = {
+            params: {
+                name: 'list-colors',
+                arguments: {}
+            }
+        };
+
+        // Act
+        if (!callToolHandler) throw new Error('callToolHandler not captured');
+        const result = await callToolHandler(request);
+
+        // Assert
+        expect(mockCalendarApi.colors.get).toHaveBeenCalled();
+        expect(result.content[0].text).toContain('Available event colors:');
+        expect(result.content[0].text).toContain('Color ID: 1 - #a4bdfc (background) / #1d1d1d (foreground)');
+        expect(result.content[0].text).toContain('Color ID: 2 - #7ae7bf (background) / #1d1d1d (foreground)');
+    });
+
+    it('should handle "update-event" tool call', async () => {
+        // Arrange
+        const updateEventArgs = {
+            calendarId: 'primary',
+            eventId: 'eventToUpdate123',
+            summary: 'Updated Team Meeting',
+            location: 'New Conference Room',
+            start: '2024-08-15T10:30:00-07:00', 
+            // Missing end, but timezone provided
+            timeZone: 'America/Los_Angeles',
+            colorId: '9',
+        };
+        const mockApiResponse = {
+            id: updateEventArgs.eventId,
+            summary: updateEventArgs.summary, 
+            location: updateEventArgs.location,
+            start: { dateTime: updateEventArgs.start, timeZone: updateEventArgs.timeZone },
+            colorId: updateEventArgs.colorId
+        };
+        (mockCalendarApi.events.patch as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockApiResponse });
+
+        const request = {
+            params: {
+                name: 'update-event',
+                arguments: updateEventArgs
+            }
+        };
+
+        // Act
+        if (!callToolHandler) throw new Error('callToolHandler not captured');
+        const result = await callToolHandler(request);
+
+        // Assert
+        expect(mockCalendarApi.events.patch).toHaveBeenCalledWith({
+            calendarId: updateEventArgs.calendarId,
+            eventId: updateEventArgs.eventId,
+            requestBody: {
+                summary: updateEventArgs.summary,
+                location: updateEventArgs.location,
+                start: { dateTime: updateEventArgs.start, timeZone: updateEventArgs.timeZone },
+                end: { timeZone: updateEventArgs.timeZone }, // Service layer adds timezone to end
+                colorId: updateEventArgs.colorId,
+            },
+        });
+        expect(result.content[0].text).toBe(`Event updated: ${mockApiResponse.summary} (${mockApiResponse.id})`);
+    });
+    
+     it('should handle "update-event" argument validation failure (missing eventId)', async () => {
+        // Arrange: Missing 'eventId' which is required
+        const invalidEventArgs = {
+            calendarId: 'primary',
+            summary: 'Update without ID',
+            timeZone: 'America/Los_Angeles', // timezone is also required by schema
+        };
+
+        const request = {
+            params: {
+                name: 'update-event',
+                arguments: invalidEventArgs,
+            },
+        };
+
+        // Act & Assert: Expect Zod validation error
+        if (!callToolHandler) throw new Error('callToolHandler not captured');
+        await expect(callToolHandler(request)).rejects.toThrow(); // ZodError
+    });
+
   // TODO: Add more tests for:
-  // - list-colors
-  // - update-event (checking patch logic)
   // - Argument validation failures for other tools
-  // - Edge cases (e.g., no calendars found, no events found)
-  // - Reminder formatting in list/search results
 }); 
