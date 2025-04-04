@@ -488,9 +488,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-
-  // Check authentication before processing any request
+  // Check authentication FIRST using the passed-in manager
   if (!(await tokenManager.validateTokens())) {
     const port = authServer ? 3000 : null;
     const authMessage = port
@@ -499,6 +497,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw new Error(authMessage);
   }
 
+  // Now that auth is checked, get arguments and initialize calendar API
+  const { name, arguments: args } = request.params;
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
   try {
@@ -787,7 +787,14 @@ async function cleanup() {
   process.exit(0);
 }
 
-main().catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
-});
+// Export for testing purposes
+export { main, server }; 
+
+// Only run main if the script is executed directly
+// This check prevents main() from running automatically during import in tests
+if (import.meta.url.startsWith('file://') && process.argv[1] === fileURLToPath(import.meta.url)) {
+    main().catch((error) => {
+      console.error("Fatal error:", error);
+      process.exit(1);
+    });
+}
