@@ -2,6 +2,7 @@ import { OAuth2Client, Credentials } from 'google-auth-library';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { getSecureTokenPath } from './utils.js';
+import { GaxiosError } from 'gaxios';
 
 export class TokenManager {
   private oauth2Client: OAuth2Client;
@@ -112,10 +113,16 @@ export class TokenManager {
         console.error("Token refreshed successfully.");
         return true;
       } catch (refreshError) {
-        console.error("Error refreshing auth token:", refreshError);
-        // Consider clearing tokens if refresh fails permanently
-        // await this.clearTokens(); 
-        return false;
+        if (refreshError instanceof GaxiosError && refreshError.response?.data?.error === 'invalid_grant') {
+            console.error("Error refreshing auth token: Invalid grant. Token likely expired or revoked. Re-authentication required.");
+            // Optionally clear the potentially invalid tokens here
+            // await this.clearTokens(); 
+            return false; // Indicate failure due to invalid grant
+        } else {
+            // Handle other refresh errors
+            console.error("Error refreshing auth token:", refreshError);
+            return false;
+        }
       }
     } else if (!this.oauth2Client.credentials.access_token && !this.oauth2Client.credentials.refresh_token) {
         console.error("No access or refresh token available.");

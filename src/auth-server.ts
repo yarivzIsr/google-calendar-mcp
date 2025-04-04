@@ -115,14 +115,17 @@ export class AuthServer {
     console.log('Starting auth server...');
     
     try {
-      const tokens = await this.tokenManager.loadSavedTokens();
-      if (tokens) {
-        console.log('Valid tokens found, no need to start auth server');
+      const areTokensValid = await this.tokenManager.validateTokens();
+      if (areTokensValid) {
+        console.log('Existing tokens are valid. No need to start auth server.');
         return true;
       }
+       // If validateTokens returns false, proceed with authentication
+      console.log('Existing tokens are invalid or missing. Proceeding with authentication...');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.log('No valid tokens found:', errorMessage);
+      console.log('Error validating tokens, proceeding with authentication:', errorMessage);
+      // Fall through to start auth flow
     }
 
     try {
