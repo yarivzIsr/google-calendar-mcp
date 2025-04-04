@@ -69,6 +69,13 @@ const ListEventsArgumentsSchema = z.object({
   timeMax: z.string().optional(),
 });
 
+const SearchEventsArgumentsSchema = z.object({
+  calendarId: z.string(),
+  query: z.string(),
+  timeMin: z.string().optional(), 
+  timeMax: z.string().optional(),
+});
+
 const CreateEventArgumentsSchema = z.object({
   calendarId: z.string(),
   summary: z.string(),
@@ -291,6 +298,32 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "search-events",
+        description: "Search for events in a calendar by text query",
+        inputSchema: {
+          type: "object",
+          properties: {
+            calendarId: {
+              type: "string",
+              description: "ID of the calendar to search events in",
+            },
+            query: {
+              type: "string",
+              description: "Free text search query",
+            },
+            timeMin: {
+              type: "string",
+              description: "Start time in ISO format (optional)",
+            },
+            timeMax: {
+              type: "string",
+              description: "End time in ISO format (optional)",
+            },
+          },
+          required: ["calendarId", "query"],
+        },
+      },
+      {
         name: "list-colors",
         description: "List available color IDs for calendar events",
         inputSchema: {
@@ -492,6 +525,59 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const validArgs = ListEventsArgumentsSchema.parse(args);
         const response = await calendar.events.list({
           calendarId: validArgs.calendarId,
+          timeMin: validArgs.timeMin,
+          timeMax: validArgs.timeMax,
+          singleEvents: true,
+          orderBy: "startTime",
+        });
+
+        const events = response.data.items || [];
+        return {
+          content: [
+            {
+              type: "text",
+              text: events
+                .map((event: any) => {
+                  const attendeeList = event.attendees
+                    ? `\nAttendees: ${event.attendees
+                        .map(
+                          (a: CalendarEventAttendee) =>
+                            `${a.email || "no-email"} (${
+                              a.responseStatus || "unknown"
+                            })`
+                        )
+                        .join(", ")}`
+                    : "";
+                  const locationInfo = event.location
+                    ? `\nLocation: ${event.location}`
+                    : "";
+                  const colorInfo = event.colorId
+                    ? `\nColor ID: ${event.colorId}`
+                    : "";
+                  const reminderInfo = event.reminders
+                    ? `\nReminders: ${event.reminders.useDefault ? 'Using default' :
+                        (event.reminders.overrides || []).map((r: any) =>
+                          `${r.method} ${r.minutes} minutes before`).join(', ') || 'None'}`
+                    : "";
+                  return `${event.summary || "Untitled"} (${
+                    event.id || "no-id"
+                  })${locationInfo}\nStart: ${
+                    event.start?.dateTime || event.start?.date || "unspecified"
+                  }\nEnd: ${
+                    event.end?.dateTime || event.end?.date || "unspecified"
+                  }${attendeeList}${colorInfo}${reminderInfo}\n`;
+                })
+                .join("\n"),
+            },
+          ],
+        };
+      }
+
+      case "search-events": {
+        const validArgs = SearchEventsArgumentsSchema.parse(args);
+        const response = await calendar.events.list({
+          calendarId: validArgs.calendarId,
+          q: validArgs.query,
           timeMin: validArgs.timeMin,
           timeMax: validArgs.timeMax,
           singleEvents: true,
