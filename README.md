@@ -163,6 +163,11 @@ The server exposes the following MCP tools:
   - `list-colors`: List available colors for events and calendars
 
 
+5. Creating a recurring event:
+   ```
+   Can you create a study events for every Tue and Thurs 9am - 10am until 4/30
+   ```
+
 ## Using with Claude Desktop
 
 1. Add this configuration to your Claude Desktop config file. E.g. `/Users/<user>/Library/Application Support/Claude/claude_desktop_config.json`:
