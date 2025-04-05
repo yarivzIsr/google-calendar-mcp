@@ -40,13 +40,13 @@ export class TokenManager {
         await fs.writeFile(this.tokenPath, JSON.stringify(updatedTokens, null, 2), {
           mode: 0o600,
         });
-        console.error("Tokens updated and saved.");
+        console.error("Tokens updated and saved");
       } catch (error: unknown) {
         // Handle case where currentTokens might not exist yet
         if (error instanceof Error && 'code' in error && error.code === 'ENOENT') { 
           try {
              await fs.writeFile(this.tokenPath, JSON.stringify(newTokens, null, 2), { mode: 0o600 });
-             console.error("New tokens saved.");
+             console.error("New tokens saved");
           } catch (writeError) {
             console.error("Error saving initial tokens:", writeError);
           }
@@ -78,7 +78,6 @@ export class TokenManager {
       }
 
       this.oauth2Client.setCredentials(tokens);
-      console.error("Tokens loaded successfully.");
       return true;
     } catch (error: unknown) {
       console.error("Error loading tokens:", error);
@@ -86,7 +85,7 @@ export class TokenManager {
       if (error instanceof Error && 'code' in error && error.code !== 'ENOENT') { 
           try { 
               await fs.unlink(this.tokenPath); 
-              console.error("Removed potentially corrupted token file.") 
+              console.error("Removed potentially corrupted token file") 
             } catch (unlinkErr) { /* ignore */ } 
       }
       return false;
@@ -110,11 +109,11 @@ export class TokenManager {
         }
         // The 'tokens' event listener should handle saving
         this.oauth2Client.setCredentials(newTokens);
-        console.error("Token refreshed successfully.");
+        console.error("Token refreshed successfully");
         return true;
       } catch (refreshError) {
         if (refreshError instanceof GaxiosError && refreshError.response?.data?.error === 'invalid_grant') {
-            console.error("Error refreshing auth token: Invalid grant. Token likely expired or revoked. Re-authentication required.");
+            console.error("Error refreshing auth token: Invalid grant. Token likely expired or revoked. Re-authentication required");
             // Optionally clear the potentially invalid tokens here
             // await this.clearTokens(); 
             return false; // Indicate failure due to invalid grant
@@ -125,8 +124,8 @@ export class TokenManager {
         }
       }
     } else if (!this.oauth2Client.credentials.access_token && !this.oauth2Client.credentials.refresh_token) {
-        console.error("No access or refresh token available.");
-        return false; // Cannot refresh
+        console.error("No access or refresh token available");
+        return false;
     } else {
         // Token is valid or no refresh token available
         return true;
@@ -152,7 +151,7 @@ export class TokenManager {
         await this.ensureTokenDirectoryExists();
         await fs.writeFile(this.tokenPath, JSON.stringify(tokens, null, 2), { mode: 0o600 });
         this.oauth2Client.setCredentials(tokens);
-        console.error("Tokens explicitly saved.");
+        console.error("Tokens explicitly saved");
     } catch (error: unknown) {
         console.error("Error explicitly saving tokens:", error);
         throw error;
@@ -163,11 +162,11 @@ export class TokenManager {
     try {
       this.oauth2Client.setCredentials({}); // Clear in memory
       await fs.unlink(this.tokenPath);
-      console.error("Tokens cleared successfully.");
+      console.error("Tokens cleared successfully");
     } catch (error: unknown) {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
         // File already gone, which is fine
-        console.error("Token file already deleted.");
+        console.error("Token file already deleted");
       } else {
         console.error("Error clearing tokens:", error);
         // Don't re-throw, clearing is best-effort
