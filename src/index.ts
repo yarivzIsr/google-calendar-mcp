@@ -75,7 +75,6 @@ async function main() {
     // 4. Connect Server Transport
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Google Calendar MCP Server running on stdio"); // Use console.error for status messages
 
     // 5. Set up Graceful Shutdown
     process.on("SIGINT", cleanup);

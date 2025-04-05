@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs/promises';
-import { getKeysFilePath } from '../config.js';
+import { getKeysFilePath } from './utils.js';
 
 export async function initializeOAuth2Client(): Promise<OAuth2Client> {
   try {
