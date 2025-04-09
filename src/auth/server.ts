@@ -3,8 +3,6 @@ import { OAuth2Client } from 'google-auth-library';
 import { TokenManager } from './tokenManager.js';
 import http from 'http';
 import open from 'open';
-import { getKeysFilePath } from './utils.js';
-import * as fs from 'fs/promises';
 import { loadCredentials } from './client.js';
 
 export class AuthServer {
