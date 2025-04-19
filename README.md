@@ -201,6 +201,20 @@ export class ListEventsHandler extends BaseToolHandler {
 }
 ```
 
+Finally, add tool name which is from `ToolDefinitions` and `ListEventsHandler` new instance object in `handlerMap` from `callTool.ts`, it will be automatic map invoke function correctly.
+
+```typescript
+const handlerMap: Record<string, BaseToolHandler> = {
+    "list-calendars": new ListCalendarsHandler(),
+    "list-events": new ListEventsHandler(),
+    "search-events": new SearchEventsHandler(),
+    "list-colors": new ListColorsHandler(),
+    "create-event": new CreateEventHandler(),
+    "update-event": new UpdateEventHandler(),
+    "delete-event": new DeleteEventHandler(),
+};
+```
+
 ## Usage with Claude Desktop
 
 1. Add this configuration to your Claude Desktop config file. E.g. `/Users/<user>/Library/Application Support/Claude/claude_desktop_config.json`:
