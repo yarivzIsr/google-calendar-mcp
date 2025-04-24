@@ -1,6 +1,7 @@
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
 import { GaxiosError } from 'gaxios';
+import { calendar_v3, google } from "googleapis";
 
 
 export abstract class BaseToolHandler {
@@ -16,5 +17,9 @@ export abstract class BaseToolHandler {
             );
         }
         throw error;
+    }
+
+    protected getCalendar(auth: OAuth2Client): calendar_v3.Calendar {
+        return google.calendar({ version: 'v3', auth });
     }
 }

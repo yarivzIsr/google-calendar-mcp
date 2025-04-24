@@ -2,7 +2,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
 import { UpdateEventArgumentsSchema } from "../../schemas/validators.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
-import { google, calendar_v3 } from 'googleapis';
+import { calendar_v3 } from 'googleapis';
 import { z } from 'zod';
 
 export class UpdateEventHandler extends BaseToolHandler {
@@ -22,7 +22,7 @@ export class UpdateEventHandler extends BaseToolHandler {
         args: z.infer<typeof UpdateEventArgumentsSchema>
     ): Promise<calendar_v3.Schema$Event> {
         try {
-            const calendar = google.calendar({ version: 'v3', auth: client });
+            const calendar = this.getCalendar(client);
             const requestBody: calendar_v3.Schema$Event = {};
             if (args.summary !== undefined) requestBody.summary = args.summary;
             if (args.description !== undefined) requestBody.description = args.description;
@@ -61,8 +61,7 @@ export class UpdateEventHandler extends BaseToolHandler {
             if (!response.data) throw new Error('Failed to update event, no data returned');
             return response.data;
         } catch (error) {
-            this.handleGoogleApiError(error);
-            throw error;
+            throw this.handleGoogleApiError(error);
         }
     }
 }

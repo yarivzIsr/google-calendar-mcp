@@ -16,12 +16,11 @@ export class ListCalendarsHandler extends BaseToolHandler {
 
     private async listCalendars(client: OAuth2Client): Promise<calendar_v3.Schema$CalendarListEntry[]> {
         try {
-            const calendar = google.calendar({ version: 'v3', auth: client });
+            const calendar = this.getCalendar(client);
             const response = await calendar.calendarList.list();
             return response.data.items || [];
         } catch (error) {
-            this.handleGoogleApiError(error);
-            throw error;
+            throw this.handleGoogleApiError(error);
         }
     }
 

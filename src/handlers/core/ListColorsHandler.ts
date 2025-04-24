@@ -1,7 +1,7 @@
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
 import { BaseToolHandler } from "./BaseToolHandler.js";
-import { calendar_v3, google } from "googleapis";
+import { calendar_v3 } from "googleapis";
 
 export class ListColorsHandler extends BaseToolHandler {
     async runTool(_: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
@@ -16,13 +16,12 @@ export class ListColorsHandler extends BaseToolHandler {
 
     private async listColors(client: OAuth2Client): Promise<calendar_v3.Schema$Colors> {
         try {
-            const calendar = google.calendar({ version: 'v3', auth: client });
+            const calendar = this.getCalendar(client);
             const response = await calendar.colors.get();
             if (!response.data) throw new Error('Failed to retrieve colors');
             return response.data;
         } catch (error) {
-            this.handleGoogleApiError(error);
-            throw error;
+            throw this.handleGoogleApiError(error);
         }
     }
 

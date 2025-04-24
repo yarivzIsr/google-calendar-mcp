@@ -22,7 +22,7 @@ export class CreateEventHandler extends BaseToolHandler {
         args: z.infer<typeof CreateEventArgumentsSchema>
     ): Promise<calendar_v3.Schema$Event> {
         try {
-            const calendar = google.calendar({ version: 'v3', auth: client });
+            const calendar = this.getCalendar(client);
             const requestBody: calendar_v3.Schema$Event = {
                 summary: args.summary,
                 description: args.description,
@@ -41,8 +41,7 @@ export class CreateEventHandler extends BaseToolHandler {
             if (!response.data) throw new Error('Failed to create event, no data returned');
             return response.data;
         } catch (error) {
-            this.handleGoogleApiError(error);
-            throw error;
+            throw this.handleGoogleApiError(error);
         }
     }
 }
