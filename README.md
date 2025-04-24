@@ -128,8 +128,6 @@ Tests mock external dependencies (Google API, filesystem) to ensure isolated tes
 - OAuth credentials (`gcp-oauth.keys.json`) and saved tokens (`.gcp-saved-tokens.json`) should **never** be committed to version control. Ensure they are added to your `.gitignore` file.
 - For production use, consider getting your OAuth application verified by Google.
 
-if you are a developer want to contribute this repository, please kindly take a look at [Architecture Overview](docs/architecture.md) before contributing
-
 ## Usage with Claude Desktop
 
 1. Add this configuration to your Claude Desktop config file. E.g. `/Users/<user>/Library/Application Support/Claude/claude_desktop_config.json`:
@@ -166,6 +164,8 @@ if you are a developer want to contribute this repository, please kindly take a 
    - Run `npm install` again.
    - Check Node.js version (use LTS).
    - Delete the `build/` directory and run `npm run build`.
+
+if you are a developer want to contribute this repository, please kindly take a look at [Architecture Overview](docs/architecture.md) before contributing
 
 ## License
 
