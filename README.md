@@ -1,7 +1,7 @@
 # Google Calendar MCP Server
 
 This is a Model Context Protocol (MCP) server that provides integration with Google Calendar. It allows LLMs to read, create, update and search for calendar events through a standardized interface.
- 
+
 ## Example Usage
 
 Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic, multi-step processes like:
@@ -12,7 +12,7 @@ Along with the normal capabilities you would expect for a calendar integration y
    ```
    Supported image formats: PNG, JPEG, GIF
    Images can contain event details like date, time, location, and description
-   
+
 2. Calendar analysis:
    ```
    What events do I have coming up this week that aren't part of my usual routine?
@@ -164,6 +164,8 @@ Tests mock external dependencies (Google API, filesystem) to ensure isolated tes
    - Run `npm install` again.
    - Check Node.js version (use LTS).
    - Delete the `build/` directory and run `npm run build`.
+
+if you are a developer want to contribute this repository, please kindly take a look at [Architecture Overview](docs/architecture.md) before contributing
 
 ## License
 
